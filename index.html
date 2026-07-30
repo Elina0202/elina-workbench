@@ -581,6 +581,9 @@
           <label class="field" style="margin-top:10px;display:flex;align-items:center;gap:8px">
             <input type="checkbox" id="syncAuto" onchange="syncToggleAuto(this)"> 自动同步（每次保存后自动上传）
           </label>
+          <label class="field" style="margin-top:6px;display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="syncOpenPull" onchange="syncToggleOpen(this)"> 打开时自动拉取云端最新（推荐开启）
+          </label>
           <button class="btn danger" onclick="syncClearCred()">🚪 清除本机令牌/密码</button>
           <p class="hint" id="syncStatus"></p>
           <p class="hint">令牌和密码只存在你这部设备的浏览器里，不会上传。建议用「只限 elina-workbench 仓库、仅 Contents 读写」的细粒度令牌降低风险。</p>
@@ -1122,18 +1125,21 @@ function syncSaveCred(){
   localStorage.setItem('elina_sync_token',tok);
   localStorage.setItem('elina_sync_pass',pass);
   localStorage.setItem('elina_sync_auto',document.getElementById('syncAuto').checked?'1':'0');
+  localStorage.setItem('elina_sync_openpull',document.getElementById('syncOpenPull').checked?'1':'0');
   syncStatus('✅ 凭据已保存到本机');
 }
 function syncClearCred(){
   localStorage.removeItem('elina_sync_token');
   localStorage.removeItem('elina_sync_pass');
   localStorage.removeItem('elina_sync_auto');
+  localStorage.removeItem('elina_sync_openpull');
   document.getElementById('syncToken').value='';
   document.getElementById('syncPass').value='';
   document.getElementById('syncAuto').checked=false;
   syncStatus('已清除本机令牌/密码');
 }
 function syncToggleAuto(cb){localStorage.setItem('elina_sync_auto',cb.checked?'1':'0');syncStatus(cb.checked?'已开启自动同步':'已关闭自动同步');}
+function syncToggleOpen(cb){localStorage.setItem('elina_sync_openpull',cb.checked?'1':'0');syncStatus(cb.checked?'已开启打开自动拉取':'已关闭打开自动拉取');}
 function maybeAutoSync(){
   try{
     if(localStorage.getItem('elina_sync_auto')!=='1')return;
@@ -1145,6 +1151,11 @@ function syncInit(){
   const t=localStorage.getItem('elina_sync_token');if(t)document.getElementById('syncToken').value=t;
   const p=localStorage.getItem('elina_sync_pass');if(p)document.getElementById('syncPass').value=p;
   document.getElementById('syncAuto').checked=localStorage.getItem('elina_sync_auto')==='1';
+  document.getElementById('syncOpenPull').checked=localStorage.getItem('elina_sync_openpull')==='1';
+  if(localStorage.getItem('elina_sync_openpull')==='1' && t && p){
+    syncStatus('打开即自动拉取云端最新…');
+    setTimeout(()=>syncPull(),400);
+  }
 }
 function buildSummary(){
   const db=load();const keys=Object.keys(db).sort();if(keys.length===0)return '（暂无记录）';
