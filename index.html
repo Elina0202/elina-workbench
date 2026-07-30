@@ -569,6 +569,23 @@
           <p class="hint">数据只存在你这部手机里（浏览器本地），不会上传。换手机或清缓存前记得先「导出」。</p>
         </div>
         <div class="card">
+          <h3><span class="ic">☁️</span>云端同步（手机↔电脑自动一致）</h3>
+          <p class="hint">把记录<b>加密</b>后存到你的 GitHub 仓库，手机和电脑打开就自动一致。数据加密上传，仓库公开也看不到内容。</p>
+          <label class="field"><span class="lab">GitHub 令牌</span><input type="password" id="syncToken" placeholder="ghp_xxx 或细粒度令牌" style="width:100%"></label>
+          <label class="field"><span class="lab">同步密码</span><input type="password" id="syncPass" placeholder="自设一个密码，两端要一样" style="width:100%"></label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button class="btn sec" onclick="syncSaveCred()">💾 保存凭据</button>
+            <button class="btn" onclick="syncPush()">🔼 上传云端</button>
+            <button class="btn" onclick="syncPull()">🔽 拉取云端</button>
+          </div>
+          <label class="field" style="margin-top:10px;display:flex;align-items:center;gap:8px">
+            <input type="checkbox" id="syncAuto" onchange="syncToggleAuto(this)"> 自动同步（每次保存后自动上传）
+          </label>
+          <button class="btn danger" onclick="syncClearCred()">🚪 清除本机令牌/密码</button>
+          <p class="hint" id="syncStatus"></p>
+          <p class="hint">令牌和密码只存在你这部设备的浏览器里，不会上传。建议用「只限 elina-workbench 仓库、仅 Contents 读写」的细粒度令牌降低风险。</p>
+        </div>
+        <div class="card">
           <h3><span class="ic">ℹ️</span>使用说明</h3>
           <p class="hint" style="line-height:1.8">
             1. 手机浏览器打开后，点右上「⋯」→ <b>添加到主屏幕</b>，以后像 App 一样点开。<br>
@@ -791,6 +808,7 @@ function doSave(){
   updateTop();
   if(activePane==='home'){renderHome();renderVitaminRate();} if(activePane==='weight')renderWeight();
   if(activePane==='white')renderWhite(); if(activePane==='anti')renderAnti(); if(activePane==='study')renderStudy();
+  maybeAutoSync();
 }
 
 /* ---------- 顶部状态 ---------- */
@@ -1005,6 +1023,129 @@ function loadMensInputs(){
 function exportJSON(){const db=load();const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='抗衰美白记录-'+todayStr()+'.json';a.click();toast('已导出')}
 function importJSON(input){const f=input.files[0];if(!f)return;const rd=new FileReader();rd.onload=function(e){try{const o=JSON.parse(e.target.result);const db=load();let c=0;Object.keys(o).forEach(k=>{db[k]=o[k];c++});saveDB(db);toast('已导入 '+c+' 天');loadDay(selectedDay);}catch(err){toast('文件格式不对')}input.value=''};rd.readAsText(f)}
 function clearAll(){if(confirm('确定清空全部本地记录？此操作不可恢复！建议先导出备份。')){localStorage.removeItem(KEY);toast('已清空');loadDay(todayStr())}}
+
+/* ---------- 云端同步（加密 + GitHub） ---------- */
+const SYNC_REPO='Elina0202/elina-workbench';
+const SYNC_FILE='data.json';
+function syncStatus(msg){const el=document.getElementById('syncStatus');if(el)el.textContent=msg;}
+function syncHasCrypto(){return !!(window.crypto&&crypto.subtle);}
+async function deriveKey(pass,salt){
+  const enc=new TextEncoder();
+  const km=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+async function encryptData(pass,obj){
+  const enc=new TextEncoder();
+  const salt=crypto.getRandomValues(new Uint8Array(16));
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(pass,salt);
+  const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(obj)));
+  const ctB=new Uint8Array(ct);const merged=new Uint8Array(16+12+ctB.length);
+  merged.set(salt,0);merged.set(iv,16);merged.set(ctB,28);
+  let bin='';for(let i=0;i<merged.length;i++)bin+=String.fromCharCode(merged[i]);
+  return btoa(bin);
+}
+async function decryptData(pass,b64){
+  let bin=atob(b64);const buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);
+  const salt=buf.slice(0,16),iv=buf.slice(16,28),ct=buf.slice(28);
+  const key=await deriveKey(pass,salt);
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv},key,ct);
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function ghAPI(method,path,body){
+  const tok=localStorage.getItem('elina_sync_token');
+  if(!tok){syncStatus('请先填写并保存 GitHub 令牌');return {status:0};}
+  try{
+    const r=await fetch('https://api.github.com'+path,{method,headers:{'Authorization':'Bearer '+tok,'Accept':'application/vnd.github+json','User-Agent':'elina-sync','Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+    const t=await r.text();let d=null;try{d=JSON.parse(t)}catch(e){}return {status:r.status,data:d};
+  }catch(e){syncStatus('网络错误：'+e.message);return {status:-1};}
+}
+function buildSnapshot(){
+  return {v:1,updatedAt:Date.now(),data:{
+    elina_wellness_v1:localStorage.getItem('elina_wellness_v1'),
+    elina_mens:localStorage.getItem('elina_mens'),
+    elina_notes_v1:localStorage.getItem('elina_notes_v1')
+  }};
+}
+function mergeSnapshot(remote){
+  const rd=remote.data||{};
+  const lw=JSON.parse(localStorage.getItem('elina_wellness_v1')||'{}');
+  const rw=rd.elina_wellness_v1?JSON.parse(rd.elina_wellness_v1):{};
+  localStorage.setItem('elina_wellness_v1',JSON.stringify(Object.assign({},lw,rw)));
+  const ln=JSON.parse(localStorage.getItem('elina_notes_v1')||'[]');
+  const rn=rd.elina_notes_v1?JSON.parse(rd.elina_notes_v1):[];
+  const byId={};ln.forEach(n=>byId[n.id]=n);rn.forEach(n=>byId[n.id]=n);
+  localStorage.setItem('elina_notes_v1',JSON.stringify(Object.values(byId)));
+  if(rd.elina_mens)localStorage.setItem('elina_mens',rd.elina_mens);
+}
+function syncGetPass(){return (document.getElementById('syncPass').value||'').trim()||localStorage.getItem('elina_sync_pass')||'';}
+async function syncPush(){
+  if(!syncHasCrypto()){syncStatus('请通过 https 网址打开后再同步');return;}
+  const tok=localStorage.getItem('elina_sync_token');const pass=syncGetPass();
+  if(!tok){syncStatus('请先保存 GitHub 令牌');return;}
+  if(!pass){syncStatus('请先填写同步密码');return;}
+  syncStatus('上传中…');
+  try{
+    const b64=await encryptData(pass,buildSnapshot());
+    const ex=await ghAPI('GET','/repos/'+SYNC_REPO+'/contents/'+SYNC_FILE);
+    let sha=ex.status===200?ex.data.sha:null;
+    const body={message:'sync '+new Date().toISOString(),content:b64};if(sha)body.sha=sha;
+    const up=await ghAPI('PUT','/repos/'+SYNC_REPO+'/contents/'+SYNC_FILE,body);
+    if(up.status===200||up.status===201)syncStatus('✅ 已上传云端（'+new Date().toLocaleTimeString()+'）');
+    else syncStatus('上传失败：'+((up.data&&up.data.message)||up.status));
+  }catch(e){syncStatus('上传出错：'+e.message);}
+}
+async function syncPull(){
+  if(!syncHasCrypto()){syncStatus('请通过 https 网址打开后再同步');return;}
+  const tok=localStorage.getItem('elina_sync_token');const pass=syncGetPass();
+  if(!tok){syncStatus('请先保存 GitHub 令牌');return;}
+  if(!pass){syncStatus('请先填写同步密码');return;}
+  syncStatus('拉取中…');
+  try{
+    const ex=await ghAPI('GET','/repos/'+SYNC_REPO+'/contents/'+SYNC_FILE);
+    if(ex.status!==200){syncStatus('云端还没有数据，请先上传');return;}
+    const b64=(ex.data.content||'').replace(/\s/g,'');
+    const snap=await decryptData(pass,b64);
+    mergeSnapshot(snap);
+    syncStatus('✅ 已从云端拉取并合并（'+new Date().toLocaleTimeString()+'）');
+    loadDay(selectedDay);
+  }catch(e){
+    if(e.name==='OperationError')syncStatus('❌ 密码不对或数据损坏，解密失败');
+    else syncStatus('拉取出错：'+e.message);
+  }
+}
+function syncSaveCred(){
+  const tok=document.getElementById('syncToken').value.trim();
+  const pass=document.getElementById('syncPass').value;
+  if(!tok){syncStatus('令牌不能为空');return;}
+  if(!pass){syncStatus('同步密码不能为空');return;}
+  localStorage.setItem('elina_sync_token',tok);
+  localStorage.setItem('elina_sync_pass',pass);
+  localStorage.setItem('elina_sync_auto',document.getElementById('syncAuto').checked?'1':'0');
+  syncStatus('✅ 凭据已保存到本机');
+}
+function syncClearCred(){
+  localStorage.removeItem('elina_sync_token');
+  localStorage.removeItem('elina_sync_pass');
+  localStorage.removeItem('elina_sync_auto');
+  document.getElementById('syncToken').value='';
+  document.getElementById('syncPass').value='';
+  document.getElementById('syncAuto').checked=false;
+  syncStatus('已清除本机令牌/密码');
+}
+function syncToggleAuto(cb){localStorage.setItem('elina_sync_auto',cb.checked?'1':'0');syncStatus(cb.checked?'已开启自动同步':'已关闭自动同步');}
+function maybeAutoSync(){
+  try{
+    if(localStorage.getItem('elina_sync_auto')!=='1')return;
+    if(!localStorage.getItem('elina_sync_token')||!localStorage.getItem('elina_sync_pass'))return;
+    syncPush();
+  }catch(e){}
+}
+function syncInit(){
+  const t=localStorage.getItem('elina_sync_token');if(t)document.getElementById('syncToken').value=t;
+  const p=localStorage.getItem('elina_sync_pass');if(p)document.getElementById('syncPass').value=p;
+  document.getElementById('syncAuto').checked=localStorage.getItem('elina_sync_auto')==='1';
+}
 function buildSummary(){
   const db=load();const keys=Object.keys(db).sort();if(keys.length===0)return '（暂无记录）';
   const rec=keys.map(k=>db[k]);const last=rec[rec.length-1],first=rec[0];
@@ -1069,6 +1210,7 @@ loadMensInputs();
 migrateOldNotes();
 if(b6EvalState()&&!localStorage.getItem('elina_b6_seen')){localStorage.setItem('elina_b6_seen','1');toast('B6 评估日已到：考虑降至10mg')}
 loadDay(todayStr());
+syncInit();
 window.addEventListener('pagehide',()=>{if(dirty&&selectedDay){const db=load();db[selectedDay]=readForm();saveDB(db);dirty=false;}});
 </script>
 </body>
