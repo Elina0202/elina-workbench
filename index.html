@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elina工作台 · 人生四线</title>
+<style>
+  :root{
+    /* 薄荷紫主题：侧栏紫→薄荷渐变，全局以薄荷紫为品牌色 */
+    --sidebar:linear-gradient(165deg,#C9C0EC 0%,#BFE3D6 100%);
+    --sidebarText:#4a4470; --sidebarActive:rgba(255,255,255,.6);
+    --bg:#F5F4FB; --card:#FFFFFF; --cardAlt:#F8F7FD;
+    --ink:#33304A; --muted:#7C7699; --line:#E6E3F2;
+    --accent:#8C7DD9; --accentText:#fff; --chip:#ECE8FA;
+    --dotW:#7BA37A; --dotWh:#E58AA0; --dotA:#5ABFB5; --dotS:#A78BE0;
+    --shadow:0 6px 18px rgba(74,68,112,.10);
+    --radius:20px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);font-size:15px;line-height:1.55;
+  }
+  .app{display:flex;height:100vh;overflow:hidden}
+
+  /* ---------- 侧边栏 ---------- */
+  .sidebar{
+    width:118px;flex:none;background:var(--sidebar);color:var(--sidebarText);
+    display:flex;flex-direction:column;padding:16px 10px;position:relative;z-index:50;
+  }
+  .brand{text-align:center;padding:6px 0 14px}
+  .brand .logo{width:42px;height:42px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 8px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+  .brand .name{font-size:15px;font-weight:800;letter-spacing:.6px}
+  .brand .sub{font-size:9.5px;opacity:.85;letter-spacing:.4px;margin-top:2px}
+
+  .today-pill{
+    background:rgba(255,255,255,.55);border-radius:16px;padding:10px 6px;text-align:center;margin:2px 6px 12px;
+    box-shadow:0 1px 4px rgba(0,0,0,.04)
+  }
+  .today-pill .cal{font-size:20px;line-height:1}
+  .today-pill .d{font-size:17px;font-weight:800;margin:2px 0}
+  .today-pill .w{font-size:10px;opacity:.8}
+
+  .nav-group{font-size:10px;letter-spacing:1px;opacity:.7;padding:10px 8px 6px;text-transform:uppercase}
+  .nav button{
+    width:100%;border:none;background:transparent;border-radius:16px;padding:10px 4px;margin:3px 0;
+    font-family:inherit;font-size:12px;color:var(--sidebarText);cursor:pointer;
+    display:flex;flex-direction:column;align-items:center;gap:4px;transition:background .15s,transform .1s;
+  }
+  .nav button:hover{background:rgba(255,255,255,.35)}
+  .nav button.on{background:var(--sidebarActive);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .nav button .ic{font-size:22px;line-height:1}
+
+  .spacer{flex:1}
+
+  /* ---------- 主区 ---------- */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+  .topbar{
+    flex:none;display:flex;align-items:center;gap:12px;padding:12px 18px;background:rgba(245,244,251,.85);backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);z-index:30
+  }
+  .hamb{display:none;border:none;background:none;font-size:22px;cursor:pointer;color:var(--ink);padding:2px 6px}
+  .top-title{font-size:15px;font-weight:800}
+  .top-spacer{flex:1}
+  .chip{font-size:11px;padding:4px 11px;border-radius:20px;font-weight:700;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .chip.on{color:#2f7a47;background:#e0f2e4}
+  .chip.off{color:#a04b6a;background:#fbeaf0}
+  .chip.mens{color:#b9761a;background:#fdeede}
+  .daypick{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  .daypick input{border:none;border-radius:10px;padding:6px 9px;font-family:inherit;font-size:12.5px;background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.05)}
+  .save-ind{font-size:11px;color:var(--muted);opacity:0;transition:opacity .4s}
+  .save-ind.show{opacity:1}
+
+  .panes{flex:1;overflow-y:auto;padding:18px;max-width:920px;width:100%;margin:0 auto}
+  section.pane{display:none;animation:fade .28s ease}
+  section.pane.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+  .card{background:var(--card);border-radius:var(--radius);padding:16px 17px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 12px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:8px}
+  .card h3 .ic{font-size:19px}
+  .card h4{margin:0 0 10px;font-size:13px;font-weight:700;color:var(--muted)}
+  .card .lead{font-size:12.5px;color:var(--muted);margin:-6px 0 12px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+
+  label.field{display:block;margin:10px 0}
+  label.field .lab{font-size:12px;color:var(--muted);margin-bottom:4px;display:block}
+  input[type=text],input[type=number],input[type=date],select,textarea{
+    width:100%;border:1px solid var(--line);border-radius:13px;padding:11px 11px;
+    font-size:15px;background:var(--cardAlt);color:var(--ink);font-family:inherit;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(140,125,217,.18)}
+  textarea{resize:vertical;min-height:48px}
+  .seg{display:flex;gap:7px;flex-wrap:wrap}
+  .plan-detail{margin-top:9px;background:var(--cardAlt);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .plan-detail .pd-row{display:flex;flex-direction:column;gap:8px}
+  .plan-detail .pd-fx{font-size:13px;color:var(--ink);line-height:1.5}
+  .plan-detail .pd-chk{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--accent);font-weight:700;cursor:pointer}
+  .plan-detail .pd-chk input{width:20px;height:20px;accent-color:var(--accent)}
+  .seg button{flex:1;min-width:60px;border:1px solid var(--line);background:var(--cardAlt);border-radius:12px;padding:11px 6px;font-size:13px;color:var(--ink);font-family:inherit;cursor:pointer}
+  .seg button.on{background:var(--accent);border-color:var(--accent);color:var(--accentText);font-weight:700}
+  .chk{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)}
+  .chk:last-child{border-bottom:none}
+  .chk input{width:20px;height:20px;accent-color:var(--accent);margin-top:1px;flex:none}
+  .chk .t{font-size:14.5px;line-height:1.4}
+  .chk .h{font-size:11px;color:var(--muted)}
+  .badge{display:inline-block;font-size:10px;font-weight:700;color:#fff;background:var(--accent);border-radius:10px;padding:1px 7px;margin-left:5px;vertical-align:middle}
+  .badge.done{background:#34c759}
+  .hidden{display:none}
+  .hint{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+
+  /* 打卡卡 */
+  .check-card{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .check-item{flex:1;min-width:100px;background:var(--card);border-radius:16px;padding:12px;text-align:center;box-shadow:var(--shadow)}
+  .check-item .ic{font-size:22px;margin-bottom:4px}
+  .check-item .k{font-size:11px;color:var(--muted)}
+  .check-item .v{font-size:15px;font-weight:800;margin-top:2px}
+
+  /* 嵌入式子卡（四线打卡：记录直接嵌进卡片内） */
+  .mini-card{background:var(--cardAlt);border:1px solid var(--line);border-radius:16px;padding:13px;display:flex;flex-direction:column;gap:7px}
+  .mini-card .mc-ic{font-size:21px}
+  .mini-card .mc-k{font-size:12px;color:var(--muted);font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .mini-card .mc-v{font-size:18px;font-weight:800;color:var(--accent)}
+  .mini-card input[type=text],.mini-card input[type=number],.mini-card select{padding:9px 10px;font-size:14px}
+  .mini-card.chk-card{flex-direction:row;align-items:center;justify-content:space-between;cursor:pointer}
+  .mini-card.chk-card .mc-left{display:flex;align-items:center;gap:9px}
+  .mini-card.chk-card input[type=checkbox]{width:24px;height:24px;accent-color:var(--accent);flex:none}
+  /* 卡片内嵌周期/经期天数（点击卡片展开滑动条） */
+  .cycle-card{position:relative;flex:1;min-width:120px;border:1px solid var(--line);background:var(--cardAlt);border-radius:16px;padding:13px 10px;text-align:center;cursor:pointer;transition:background .15s,box-shadow .15s;user-select:none}
+  .cycle-card:hover{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .cycle-card .ic{font-size:20px;margin-bottom:3px}
+  .cycle-card .k{font-size:13px;font-weight:800;color:var(--ink)}
+  .cycle-card .sub{font-size:12px;color:var(--accent);font-weight:700;margin-top:2px}
+  .cycle-card.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .cycle-card.on .k,.cycle-card.on .sub{color:#fff}
+  .cycle-card.locked{opacity:.5}
+  .cycle-card.locked .sub{color:var(--muted)!important}
+  .cycle-pop input:disabled{opacity:.5;cursor:not-allowed}
+  .cycle-pop{margin-top:10px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+
+  /* 美白肤色选择 */
+  .skin-seg .seg button{min-width:72px;padding:11px 8px}
+
+  /* 各卡内备注 */
+  .card-notes{margin-top:12px;border-top:1px dashed var(--line);padding-top:10px}
+  .card-notes .cn-h{font-size:12px;color:var(--muted);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:5px}
+  .card-notes .cn-input{display:flex;gap:8px;align-items:flex-start}
+  .card-notes .cn-input textarea{flex:1;min-height:38px;padding:9px 11px;font-size:14px;border:1px solid var(--line);border-radius:11px;font-family:inherit;resize:vertical;background:#fff}
+  .card-notes .cn-list{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+  .card-notes .cn-item{display:flex;align-items:flex-start;gap:8px;background:var(--cardAlt);border:1px solid var(--line);border-radius:11px;padding:8px 11px}
+  .card-notes .cn-item .txt{flex:1;min-width:0;font-size:12.8px;color:var(--ink);line-height:1.45;word-break:break-word}
+  .card-notes .cn-del{flex:none;border:1px solid #f0c9c4;background:#fff;color:#C0392B;border-radius:9px;padding:5px 11px;font-size:12px;cursor:pointer;font-family:inherit}
+  .card-notes .cn-del:active{background:#fbeaea}
+  .card-notes .cn-empty{font-size:12px;color:var(--muted);text-align:center;padding:8px 0}
+  .weight-big{font-size:26px;font-weight:800;color:var(--accent);text-align:center}
+  .weight-ruler{width:100%;accent-color:var(--accent);margin:4px 0}
+  .weight-num{font-size:13px!important;padding:8px!important;width:100%!important}
+  .prep-detail{font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.5;background:var(--cardAlt);border-radius:10px;padding:8px 10px}
+  .prep-toggle{cursor:pointer;font-size:16px}
+
+  /* 数字滑动条（ON第几日 / 经期第几日） */
+  .slider-pick{position:relative}
+  .slider-chip{display:inline-flex;align-items:center;gap:6px;background:var(--cardAlt);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-size:14px;cursor:pointer;font-weight:700;color:var(--ink);user-select:none}
+  .slider-chip b{color:var(--accent)}
+  .slider-pop{margin-top:8px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+  .slider-pop input[type=range]{width:100%;accent-color:var(--accent)}
+  .slider-big{text-align:center;font-size:26px;font-weight:800;color:var(--accent);margin-top:4px}
+  .slider-done{margin-top:10px;width:100%;border:none;background:var(--accent);color:#fff;border-radius:10px;padding:9px;font-family:inherit;font-weight:700;cursor:pointer}
+
+  /* 图表 */
+  .stat-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:7px 0;border-bottom:1px dashed var(--line)}
+  .stat-row:last-child{border-bottom:none}
+  .stat-row .v{font-weight:800;color:var(--accent)}
+  .bar{height:9px;background:#ece9f5;border-radius:6px;overflow:hidden;margin-top:4px}
+  .bar>span{display:block;height:100%;background:var(--accent);border-radius:6px;transition:width .4s}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:16px 0}
+  .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:7px}
+  .legend i{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:4px}
+  .insight{background:#fff;border:1px solid var(--line);border-radius:13px;padding:10px 12px;font-size:12.8px;color:var(--ink);margin:8px 0}
+  .insight b{color:var(--accent)}
+
+  /* 概览卡 */
+  .overview{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:14px}
+  .ov{background:var(--card);border-radius:18px;padding:14px;box-shadow:var(--shadow);cursor:pointer;transition:transform .12s;position:relative;overflow:hidden}
+  .ov:hover{transform:translateY(-2px)}
+  .ov::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--c)}
+  .ov .ttl{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:5px}
+  .ov .big{font-size:20px;font-weight:800;margin:6px 0 2px}
+  .ov .sub{font-size:11px;color:var(--muted)}
+
+  /* 日历卡片 */
+  .cal-head{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:10px}
+  .cal-nav{border:none;background:var(--cardAlt);border-radius:50%;width:34px;height:34px;font-size:19px;line-height:1;cursor:pointer;color:var(--ink);font-family:inherit}
+  .cal-nav:hover{background:#efeaf9}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cal-grid .wd{font-size:11px;color:var(--muted);text-align:center;padding:3px 0;font-weight:700}
+  .cal-cell{position:relative;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;border-radius:12px;cursor:pointer;background:var(--cardAlt);border:1px solid transparent;transition:background .12s}
+  .cal-cell:hover{background:#efeaf9}
+  .cal-cell.dim{color:#cfcbe2;background:transparent;cursor:default}
+  .cal-cell.dim:hover{background:transparent}
+  .cal-cell.sel{outline:3px solid var(--accent);outline-offset:-3px;font-weight:800;z-index:2}
+  .cal-cell.today{box-shadow:inset 0 0 0 2px var(--accent)}
+  .cal-cell .cal-num{position:relative;z-index:2;text-shadow:0 1px 0 rgba(255,255,255,.6);transform:translateY(-4px)}
+  .cal-cell .cal-badge{position:relative;transform:translateY(3px);font-size:8px;font-weight:800;line-height:1;padding:1px 5px 2px;border-radius:8px;z-index:1;letter-spacing:.3px;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .cal-badge.on{background:var(--accent);color:#fff}
+  .cal-badge.off{background:#2E9E8F;color:#fff}
+  .cal-cell.cal-on{background:#ECE8FB}
+  .cal-cell.cal-off{background:#E2F2EF}
+  .cal-cell.period{background:#FBE0E0;color:#C0392B;font-weight:800}
+  .cal-cell.pred{background:#FCEFEF;color:#D98A9A;font-weight:700}
+  .cal-cell.ovu{color:#2E77D6;font-weight:700}
+  .cal-cell.ovuday{background:#E6F0FC;box-shadow:inset 0 0 0 2px #5AA0F0;font-weight:800;color:#1B5FB0}
+
+  /* 底部全局备注栏已移除，改为各卡内备注 */
+
+  /* 手册/数据 */
+  .manual table{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0;background:#fff;border-radius:12px;overflow:hidden}
+  .manual th,.manual td{border:1px solid var(--line);padding:6px 7px;text-align:left}
+  .manual th{background:#eef0fa;color:var(--ink)}
+  details{border:1px solid var(--line);border-radius:14px;margin:8px 0;background:#fff;overflow:hidden}
+  details summary{padding:12px 14px;font-size:13.5px;font-weight:700;cursor:pointer}
+  details .body{padding:0 14px 12px}
+  .btn{display:block;width:100%;border:none;border-radius:13px;padding:13px;font-size:14.5px;font-weight:700;background:var(--accent);color:var(--accentText);font-family:inherit;margin-top:8px;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+  .btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn.danger{background:#fff;color:#C0392B;border:1px solid #f0c9c4}
+  .btn.confirm-save{background:linear-gradient(135deg,#8C7DD9,#7FB8A8);box-shadow:0 4px 12px rgba(140,125,217,.3);font-size:15px;padding:14px}
+  .card-confirm{display:inline-block;border:none;border-radius:11px;padding:9px 20px;font-size:13.5px;font-weight:700;background:var(--accent);color:var(--accentText);font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(140,125,217,.22)}
+
+  .toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:rgba(51,48,74,.92);color:#fff;padding:10px 18px;border-radius:22px;font-size:13px;z-index:99;opacity:0;transition:opacity .25s}
+  .toast.show{opacity:1}
+  .overlay{display:none}
+
+  /* 移动端：左导航固定常驻，不浮窗不遮挡 */
+  @media(max-width:820px){
+    .sidebar{width:90px;padding:10px 4px;position:relative}
+    .brand .name{font-size:12px}
+    .brand .logo{width:36px;height:36px;font-size:19px}
+    .nav button{font-size:11px;padding:8px 2px}
+    .nav button .ic{font-size:19px}
+    .nav-group{font-size:9px;padding:8px 6px 4px}
+    .topbar{padding:10px 12px;flex-wrap:wrap;gap:8px}
+    .top-title{font-size:14px}
+    .panes{padding:12px}
+    .hamb{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="overlay" onclick="closeNav()"></div>
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">🌸</div><div class="name">Elina工作台<div class="sub">Daily Workbench</div></div></div>
+    <div class="today-pill">
+      <div class="cal">🗓️</div>
+      <div class="d" id="sideDay">--</div>
+      <div class="w" id="sideWeek">今日计划</div>
+    </div>
+    <nav class="nav">
+      <button class="on" data-pane="home" onclick="switchPane('home',this)"><span class="ic">📅</span>今日计划</button>
+      <div class="nav-group">人生四线</div>
+      <button data-pane="weight" onclick="switchPane('weight',this)"><span class="ic">⚖️</span>体重管理</button>
+      <button data-pane="white" onclick="switchPane('white',this)"><span class="ic">🌸</span>美白内调</button>
+      <button data-pane="anti" onclick="switchPane('anti',this)"><span class="ic">✨</span>抗衰控油</button>
+      <button data-pane="study" onclick="switchPane('study',this)"><span class="ic">📚</span>学习成长</button>
+      <div class="spacer"></div>
+      <button data-pane="manual" onclick="switchPane('manual',this)"><span class="ic">📖</span>药膳手册</button>
+      <button data-pane="data" onclick="switchPane('data',this)"><span class="ic">⚙️</span>设置</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="top-title" id="topTitle">今日计划</div>
+      <div class="top-spacer"></div>
+      <span class="chip on" id="chipCycle" style="display:none"></span>
+      <span class="chip mens" id="chipMens" style="display:none"></span>
+      <label class="daypick">记录日<input type="date" id="dayPick" onchange="onDayPick(this.value)"></label>
+      <span class="save-ind" id="saveInd"></span>
+    </header>
+
+    <div class="panes">
+      <!-- ===================== 今日计划 ===================== -->
+      <section class="pane active" id="pane-home">
+        <div class="card" id="calCard">
+          <h3><span class="ic">🗓️</span>日历 · 点击日期查看 / 补记</h3>
+          <div class="cal-head">
+            <button class="cal-nav" type="button" onclick="calShift(-1)">‹</button>
+            <span id="calMonthLabel" style="font-weight:800;font-size:14px"></span>
+            <button class="cal-nav" type="button" onclick="calShift(1)">›</button>
+          </div>
+          <div class="cal-grid" id="calGrid"></div>
+          <div class="legend" style="margin-top:10px">
+            <span><i style="background:#C0392B"></i>月经期</span>
+            <span><i style="background:#FCEFEF;border:1px solid #E7B7C2"></i>预测经期</span>
+            <span><i style="background:#5AA0F0"></i>排卵期</span>
+            <span><i style="background:#E6F0FC;border:1px solid #5AA0F0"></i>排卵日</span>
+            <span><i style="background:var(--accent)"></i>ON 主周期</span>
+            <span><i style="background:#2E9E8F"></i>OFF 停饮日</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3><span class="ic">📅</span>今日计划</h3>
+          <p class="lead" id="homeLead"> loading…</p>
+          <label class="field"><span class="lab">今日药膳周期</span>
+            <div style="display:flex;gap:10px">
+              <div class="cycle-card" id="card-ON" onclick="setCycle('ON')">
+                <div class="ic">🌿</div>
+                <div class="k">ON 主周期</div>
+                <div class="sub" id="onDaySub">未选</div>
+              </div>
+              <div class="cycle-card" id="card-OFF" onclick="setCycle('OFF')">
+                <div class="ic">🌙</div>
+                <div class="k">OFF 停饮日</div>
+                <div class="sub" id="offDaySub">未选</div>
+              </div>
+            </div>
+            <p class="hint" style="margin-top:8px">每天只需点选「ON 主周期」或「OFF 停饮日」；第几天由系统按你已记录的天数自动推算（连续同模式自动 +1，切换模式即从第 1 天重新计）。</p>
+          </label>
+
+          <label class="field" style="margin-top:10px" id="planField"><span class="lab">停饮日方案（仅 OFF 停饮日时填写）</span>
+            <div class="seg" id="seg-plan">
+              <button data-v="A" onclick="togglePlanDetail('A')">A 润燥</button>
+              <button data-v="B" onclick="togglePlanDetail('B')">B 健脾</button>
+              <button data-v="C" onclick="togglePlanDetail('C')">C 补肾</button>
+            </div>
+            <div class="plan-detail hidden" id="planDetail"></div>
+          </label>
+
+          <label class="field" style="margin-top:10px"><span class="lab">经期状态</span>
+            <div style="display:flex;gap:10px">
+              <div class="cycle-card" id="card-none" onclick="setMens('none')">
+                <div class="ic">🌸</div>
+                <div class="k">非经期</div>
+                <div class="sub" style="opacity:0">—</div>
+              </div>
+              <div class="cycle-card" id="card-period" onclick="setMens('period')">
+                <div class="ic">🌺</div>
+                <div class="k">经期中</div>
+                <div class="sub" id="mensDaySub">第 1 天</div>
+              </div>
+            </div>
+            <div class="cycle-pop hidden" id="mensDayPop">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span class="ic">🌺</span><b>经期第几天</b></div>
+              <input type="range" min="1" max="10" value="1" id="mensDay" oninput="sliderMove('mensDay')">
+              <div class="slider-big" id="mensDayBig">1</div>
+              <button type="button" class="slider-done" onclick="closeAllSliders()">确定</button>
+            </div>
+          </label>
+
+    <label class="field" style="margin-top:10px"><span class="lab">大便</span><select id="stool" onchange="scheduleSave()"><option value="">未记</option><option value="normal">正常</option><option value="dry">偏干</option><option value="loose">偏稀</option><option value="none">未排便</option></select></label>
+    <div style="text-align:right;margin-top:14px"><button class="card-confirm" onclick="confirmSave()">确认本卡</button></div>
+  </div>
+
+        <div class="card">
+          <h3><span class="ic">🌙</span>夜间备料 <span style="font-size:11px;color:var(--muted);font-weight:400">（点图标看配方，勾选保留）</span></h3>
+          <div class="check-card">
+            <div class="check-item"><div class="ic prep-toggle" onclick="togglePrepDetail('decoct')" title="点我查看配方">🍵</div><div class="k">三白饮煎药</div><div class="v"><input type="checkbox" id="decoct" onchange="scheduleSave()"></div></div>
+            <div class="prep-detail hidden" id="prep-decoct" style="flex-basis:100%">麸炒白术9g · 白茯苓9g · 白芍12g（腹胀便稀→9g） · 炙甘草3g。3天总量：780ml水大火烧开转小火20分钟，滤出分3罐冷藏（每罐约260ml），管接下来3天。</div>
+            <div class="check-item"><div class="ic prep-toggle" onclick="togglePrepDetail('soak')" title="点我查看配方">🥛</div><div class="k">七白饮泡料</div><div class="v"><input type="checkbox" id="soak" onchange="scheduleSave()"></div></div>
+            <div class="prep-detail hidden" id="prep-soak" style="flex-basis:100%">南杏仁10g · 山药3g · 莲子5g · 百合5g · 玉竹5g · 白扁豆5g · 银耳1朵 · 陈皮2g。睡前清水浸泡6-8小时，<b>当天泡当天用</b>；打浆时 +1罐三白饮药汁 + 清水兑至800ml。</div>
+            <div class="check-item"><div class="ic prep-toggle" onclick="togglePrepDetail('offprep')" title="点我查看配方">🥗</div><div class="k">停饮日备料</div><div class="v"><input type="checkbox" id="offprep" onchange="scheduleSave()"></div></div>
+            <div class="prep-detail hidden" id="prep-offprep" style="flex-basis:100%">停饮日三选一：A 燕麦+皂角米+雪燕+脱脂奶（润燥） / B 黄豆+白茯苓+芡实+陈皮（健脾） / C 黑米+黑豆+黑芝麻+陈皮（补肾·经期首选）。另固定 + 去脂猪皮冻（每周1次）。</div>
+          </div>
+    <div style="text-align:right;margin-top:14px"><button class="card-confirm" onclick="confirmSave()">确认本卡</button></div>
+        </div>
+
+        <div class="card" id="vitaminCard">
+          <h3><span class="ic">💊</span>今日维生素执行率 <span style="font-size:11px;color:var(--muted);font-weight:400">（维C 4片/天 · B2·B6 各1次/天）</span></h3>
+          <div id="vitaminRate"></div>
+        </div>
+
+        <div class="overview" id="overview"></div>
+
+        <div class="card">
+          <h3><span class="ic">📈</span>近期趋势</h3>
+          <div id="chHomeWeight"></div>
+          <div id="chHomeStudy" style="margin-top:8px"></div>
+        </div>
+      </section>
+
+      <!-- ===================== 体重管理 ===================== -->
+      <section class="pane" id="pane-weight">
+        <div class="card">
+          <h3><span class="ic">⚖️</span>体重管理 · 今日打卡</h3>
+          <div class="grid2" style="gap:13px">
+            <div class="mini-card"><div class="mc-ic">⚖️</div><div class="mc-k">晨重（斤）</div>
+              <div class="weight-big" id="weightBig">--</div>
+              <input type="range" class="weight-ruler" min="80" max="100" step="0.1" value="90" id="weightRuler" oninput="weightMove()">
+              <input type="number" class="weight-num" step="0.1" min="80" max="100" id="weight" placeholder="手动输入" oninput="weightNumSet()" onchange="weightNumBlur()">
+            </div>
+            <div class="mini-card"><div class="mc-ic">🍖</div><div class="mc-k">蛋白质</div><select id="protein" onchange="scheduleSave()"><option value="">未记</option><option>白水蛋</option><option>猪瘦肉</option><option>鸡/鸭腿</option><option>其他</option></select></div>
+            <div class="mini-card"><div class="mc-ic">🥬</div><div class="mc-k">午餐菜</div><input type="text" id="lunchVeg" placeholder="如 炒青菜" oninput="scheduleSave()"></div>
+            <div class="mini-card"><div class="mc-ic">🥕</div><div class="mc-k">晚餐菜</div><input type="text" id="dinnerVeg" placeholder="如 胡萝卜炒肉" oninput="scheduleSave()"></div>
+          </div>
+          <p class="hint">目标 88–90 斤维持，BMI17.7 偏瘦，不宜再减。一日两餐，午餐 12:30-14:00。</p>
+    <div style="text-align:right;margin-top:14px"><button class="card-confirm" onclick="confirmSave()">确认本卡</button></div>
+        </div>
+        <div class="card">
+          <h3><span class="ic">🔍</span>分析复盘</h3>
+          <div id="chWeight"></div>
+          <div id="weightStats" style="margin-top:12px"></div>
+          <div class="card-notes">
+            <div class="cn-h">📝 本卡备注</div>
+            <div class="cn-input"><textarea id="cnText1" placeholder="本卡备注，仅保存在此…"></textarea><button class="card-confirm" onclick="addLineNote(1)">确定</button></div>
+            <div class="cn-list" id="cnList1"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 美白内调 ===================== -->
+      <section class="pane" id="pane-white">
+        <div class="card">
+          <h3><span class="ic">🌸</span>美白内调 · 今日打卡</h3>
+          <div class="grid2" style="gap:13px">
+            <div class="mini-card"><div class="mc-ic">💊</div><div class="mc-k">维生素C</div><select id="vitcPcs" onchange="scheduleSave()"><option value="">未服用</option><option value="1">1片</option><option value="2">2片</option><option value="3">3片</option><option value="4">4片</option><option value="other">其他</option></select><input type="text" id="vitcNote" placeholder="剂量备注" style="margin-top:2px;font-size:12px;padding:7px 8px" oninput="scheduleSave()"></div>
+            <label class="mini-card chk-card"><div class="mc-left"><span class="mc-ic">🍠</span><span class="mc-k">紫薯</span></div><input type="checkbox" id="yam" onchange="scheduleSave()"></label>
+            <label class="mini-card chk-card"><div class="mc-left"><span class="mc-ic">🥗</span><span class="mc-k">紫甘蓝<span style="font-weight:400;color:var(--muted);font-size:11px">（香油凉拌）</span></span></div><input type="checkbox" id="cabbage" onchange="scheduleSave()"></label>
+            <div class="mini-card skin-seg"><div class="mc-ic">🌸</div><div class="mc-k">肤色观察</div>
+              <div class="seg" id="seg-skin">
+                <button data-v="均匀" onclick="setSkin('均匀')">均匀</button>
+                <button data-v="暗沉" onclick="setSkin('暗沉')">暗沉</button>
+                <button data-v="透亮" onclick="setSkin('透亮')">透亮</button>
+              </div>
+            </div>
+          </div>
+    <div style="text-align:right;margin-top:14px"><button class="card-confirm" onclick="confirmSave()">确认本卡</button></div>
+        </div>
+        <div class="card">
+          <h3><span class="ic">🔍</span>分析复盘</h3>
+          <div id="whiteStats"></div>
+          <div id="whiteMed" style="margin-top:12px"></div>
+          <div class="card-notes">
+            <div class="cn-h">📝 本卡备注</div>
+            <div class="cn-input"><textarea id="cnText2" placeholder="本卡备注，仅保存在此…"></textarea><button class="card-confirm" onclick="addLineNote(2)">确定</button></div>
+            <div class="cn-list" id="cnList2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 抗衰控油 ===================== -->
+      <section class="pane" id="pane-anti">
+        <div class="card">
+          <h3><span class="ic">✨</span>抗衰控油 · 今日打卡</h3>
+          <div class="grid2" style="gap:13px">
+            <label class="mini-card chk-card"><div class="mc-left"><span class="mc-ic">💊</span><span class="mc-k">维生素B2</span></div><input type="checkbox" id="b2" onchange="scheduleSave()"></label>
+            <label class="mini-card chk-card"><div class="mc-left"><span class="mc-ic">💊</span><span class="mc-k">维生素B6 <span class="badge" id="b6Badge">8.11 待评估</span></span></div><input type="checkbox" id="b6" onchange="scheduleSave()"></label>
+            <label class="mini-card chk-card"><div class="mc-left"><span class="mc-ic">🧪</span><span class="mc-k">锌片 15mg</span></div><input type="checkbox" id="zinc" onchange="scheduleSave()"></label>
+            <label class="mini-card chk-card"><div class="mc-left"><span class="mc-ic">🍮</span><span class="mc-k">猪皮冻</span></div><input type="checkbox" id="pigskin" onchange="scheduleSave()"></label>
+          </div>
+          <p class="hint">B2 10mg + B6 20mg（8.11 评估减量）+ 锌 15mg，午餐后；猪皮冻每周1次停饮日吃。未购买锌则留空不勾。</p>
+    <div style="text-align:right;margin-top:14px"><button class="card-confirm" onclick="confirmSave()">确认本卡</button></div>
+        </div>
+        <div class="card">
+          <h3><span class="ic">🔍</span>分析复盘</h3>
+          <div class="grid2" style="margin-bottom:6px">
+            <label class="field"><span class="lab">面部出油</span><select id="oil" onchange="scheduleSave()"><option value="">未记</option><option value="normal">正常</option><option value="more">偏多</option><option value="less">偏少</option></select></label>
+            <label class="field"><span class="lab">毛孔观察</span><select id="pores" onchange="scheduleSave()"><option value="">未记</option><option value="粗大">粗大</option><option value="中等">中等</option><option value="细腻">细腻</option><option value="肉眼不明显">肉眼不明显</option></select></label>
+          </div>
+          <div id="b6Reminder" class="insight" style="display:none"></div>
+          <div id="chOil"></div>
+          <div id="antiStats" style="margin-top:12px"></div>
+          <div class="card-notes">
+            <div class="cn-h">📝 本卡备注</div>
+            <div class="cn-input"><textarea id="cnText3" placeholder="本卡备注，仅保存在此…"></textarea><button class="card-confirm" onclick="addLineNote(3)">确定</button></div>
+            <div class="cn-list" id="cnList3"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 学习成长 ===================== -->
+      <section class="pane" id="pane-study">
+        <div class="card">
+          <h3><span class="ic">📚</span>学习成长 · 今日打卡</h3>
+          <div class="grid2" style="gap:13px">
+            <div class="mini-card"><div class="mc-ic">📖</div><div class="mc-k">内容</div><input type="text" id="studyContent" placeholder="书名/章节" oninput="scheduleSave()"></div>
+            <div class="mini-card"><div class="mc-ic">🎧</div><div class="mc-k">形式</div><select id="studyForm" onchange="scheduleSave()"><option value="">未记</option><option>看书</option><option>听书</option><option>其他</option></select></div>
+            <div class="mini-card"><div class="mc-ic">⏱️</div><div class="mc-k">时长（分钟）</div><input type="number" id="studyMin" min="0" placeholder="如 30" oninput="scheduleSave()"></div>
+            <div class="mini-card"><div class="mc-ic">🔥</div><div class="mc-k">连续</div><div class="mc-v" id="studyStreakShow">0 天</div></div>
+          </div>
+            <label class="field" style="margin-top:12px"><span class="lab">收获 / 感悟</span><textarea id="studyGain" placeholder="一句话记录" oninput="scheduleSave()"></textarea></label>
+    <div style="text-align:right;margin-top:14px"><button class="card-confirm" onclick="confirmSave()">确认本卡</button></div>
+          </div>
+        <div class="card">
+          <h3><span class="ic">🔍</span>分析复盘</h3>
+          <div id="chStudy"></div>
+          <div id="studyStats" style="margin-top:12px"></div>
+          <div class="card-notes">
+            <div class="cn-h">📝 本卡备注</div>
+            <div class="cn-input"><textarea id="cnText4" placeholder="本卡备注，仅保存在此…"></textarea><button class="card-confirm" onclick="addLineNote(4)">确定</button></div>
+            <div class="cn-list" id="cnList4"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== 手册 ===================== -->
+      <section class="pane manual" id="pane-manual">
+        <div class="card">
+          <details open><summary>🎯 人生四线目标</summary><div class="body">
+            <p><b>① 体重管理：</b>维持 88–90 斤，不再减（BMI17.7偏瘦，伤骨密度与皮肤饱满度）。一日两餐，午餐12:30-14:00。</p>
+            <p><b>② 美白内调：</b>肤色均匀、减暗沉。维C 400mg/天 + 花青素（紫薯/紫甘蓝）+ 低GI减糖化。</p>
+            <p><b>③ 抗衰控油：</b>控油、胶原、弹性。B2 10mg + B6 20mg（观察期）+ 锌15mg + 猪皮冻。</p>
+            <p><b>④ 学习成长：</b>每日15:00前后微信读书，冷启动→30分钟/天。</p>
+          </div></details>
+          <details><summary>🍵 三白饮（药基底·3天煎1次）</summary><div class="body">
+            <table><tr><th>成分</th><th>3天总量</th><th>角色</th></tr>
+            <tr><td>麸炒白术</td><td>9g</td><td>健脾燥湿</td></tr>
+            <tr><td>白茯苓</td><td>9g</td><td>利水渗湿</td></tr>
+            <tr><td>白芍</td><td>12g</td><td>柔肝养血</td></tr>
+            <tr><td>炙甘草</td><td>3g</td><td>调和诸药</td></tr></table>
+            <p><b>煎法：</b>780ml水 → 大火烧开 → 小火20分钟 → 分3罐冷藏（每罐约260ml）。</p>
+            <p>⚠️ 腹胀便稀时白芍3天总量→9g。</p>
+          </div></details>
+          <details><summary>🥛 七白饮（每天打浆·午餐饮）</summary><div class="body">
+            <p>南杏仁10g、山药3g、莲子5g、百合5g、玉竹5g、白扁豆5g、银耳1朵、陈皮2g。</p>
+            <p><b>泡料：</b>睡前清水浸泡6-8小时，<u>当天泡当天用</u>，不可一次泡3天。</p>
+            <p><b>打浆：</b>泡料 + 1罐三白饮药汁 + 清水兑至800ml → 豆浆模式。</p>
+          </div></details>
+          <details><summary>🔄 停饮日 A/B/C（3~6天ON后停1天）</summary><div class="body">
+            <table><tr><th>方案</th><th>食材</th><th>方向</th></tr>
+            <tr><td>A</td><td>燕麦+皂角米+雪燕+脱脂奶粉</td><td>润燥补水</td></tr>
+            <tr><td>B</td><td>黄豆+白茯苓+芡实+陈皮</td><td>健脾利湿</td></tr>
+            <tr><td>C</td><td>黑米+黑豆+黑芝麻+陈皮</td><td>补肾益精（经期首选）</td></tr></table>
+            <p>停饮日固定 + 去脂猪皮冻（每周1次）。</p>
+          </div></details>
+          <details><summary>💊 每日补充剂</summary><div class="body">
+            <table><tr><th>补充剂</th><th>每日</th><th>时间</th></tr>
+            <tr><td>维C 100mg/片</td><td>午2+晚2=400mg（按片数记录）</td><td>随餐</td></tr>
+            <tr><td>B2 5mg/片</td><td>2片=10mg</td><td>午餐后</td></tr>
+            <tr><td>B6 10mg/片</td><td>2片=20mg</td><td>午餐后（8/11 评估是否降至10mg）</td></tr>
+            <tr><td>锌（葡萄糖酸锌）</td><td>目标15mg</td><td>午餐后（每日勾选，未购留空）</td></tr></table>
+          </div></details>
+          <details><summary>🌸 经期调整（寒虚体质）</summary><div class="body">
+            <p>去：绿豆、金银花。增：当归、桂圆、艾叶（视情况）。停饮日偏C。周期缩短至3天一停。</p>
+            <p>上火处理（当前）：陈皮加至3-4g + 下午淡茶一杯 + 停桂圆；黄芪暂不加。</p>
+          </div></details>
+          <details><summary>🩺 体质微调速查</summary><div class="body">
+            <table><tr><th>身体信号</th><th>调整</th></tr>
+            <tr><td>腹胀便稀</td><td>白芍3天总量→9g</td></tr>
+            <tr><td>大便干/口干</td><td>3天一停，偏A</td></tr>
+            <tr><td>皮肤差/毛孔明显</td><td>3天一停，偏A</td></tr>
+            <tr><td>精力好/消化稳</td><td>可拉长至6天一停</td></tr></table>
+          </div></details>
+          <details><summary>⏰ 每日时间表</summary><div class="body">
+            <p>上午 空腹 · 12:30-14:00 午餐 · 15:00 学习 · 晚餐 · 21:30-22:00 备料 · 21:07 睡前记录</p>
+          </div></details>
+        </div>
+      </section>
+
+      <!-- ===================== 设置/数据 ===================== -->
+      <section class="pane" id="pane-data">
+        <div class="card">
+          <h3><span class="ic">🌸</span>经期周期设置</h3>
+          <label class="field"><span class="lab">上次经期开始日</span><input type="date" id="mensSeed" onchange="saveMensSettings()"></label>
+          <div class="grid2">
+            <label class="field"><span class="lab">经期持续天数</span><input type="number" id="mensDur" min="1" value="7" oninput="saveMensSettings()"></label>
+            <label class="field"><span class="lab">周期天数（间隔）</span><input type="number" id="mensInt" min="14" value="29" oninput="saveMensSettings()"></label>
+          </div>
+          <p class="hint" id="mensPredict"></p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">💾</span>数据备份</h3>
+          <button class="btn sec" onclick="exportJSON()">⬇️ 导出全部记录（JSON）</button>
+          <button class="btn sec" onclick="document.getElementById('importFile').click()">⬆️ 导入记录（JSON）</button>
+          <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importJSON(this)">
+          <button class="btn" onclick="copySummary()">📋 复制分析摘要（发给AI用）</button>
+          <button class="btn danger" onclick="clearAll()">🗑️ 清空全部数据</button>
+          <p class="hint">数据只存在你这部手机里（浏览器本地），不会上传。换手机或清缓存前记得先「导出」。</p>
+        </div>
+        <div class="card">
+          <h3><span class="ic">ℹ️</span>使用说明</h3>
+          <p class="hint" style="line-height:1.8">
+            1. 手机浏览器打开后，点右上「⋯」→ <b>添加到主屏幕</b>，以后像 App 一样点开。<br>
+            2. 左侧点人生四线切换模块，右侧做记录、看分析；底部备注随时写心情。<br>
+            3. 顶部「记录日」可切日期补记；所有输入<b>自动保存</b>。<br>
+            4. 主题统一为<b>薄荷紫</b>，简洁清新。<br>
+            5. 想让我做深度分析：设置页点「复制分析摘要」发给我。
+          </p>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY='elina_wellness_v1';
+function load(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}}}
+function saveDB(o){localStorage.setItem(KEY,JSON.stringify(o))}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function addDays(s,n){const d=new Date(s+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function weekday(s){const w=['日','一','二','三','四','五','六'];return '周'+w[new Date(s+'T00:00:00').getDay()]}
+function hhmm(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
+
+/* ---------- 经期周期推算（可设置种子） ---------- */
+function mensSettings(){
+  const def={seed:'2026-07-26',dur:7,interval:29};
+  try{const s=JSON.parse(localStorage.getItem('elina_mens'));if(s&&s.seed)return Object.assign({},def,s)}catch(e){}
+  return def;
+}
+function periodInfo(day){
+  const m=mensSettings();
+  const seed=new Date(m.seed+'T00:00:00');
+  const d=new Date(day+'T00:00:00');
+  const diff=Math.round((d-seed)/86400000);
+  const k=Math.floor(diff/m.interval);
+  const cycleStart=new Date(seed.getTime());cycleStart.setDate(cycleStart.getDate()+k*m.interval);
+  const offset=diff-k*m.interval;
+  const inPeriod=offset>=0&&offset<m.dur;
+  const nextStart=new Date(cycleStart.getTime());nextStart.setDate(nextStart.getDate()+m.interval);
+  const ovOffset=m.interval-14;
+  const inOvulation=offset>=ovOffset-3 && offset<=ovOffset+3;
+  const isOvulationDay=offset===ovOffset;
+  const fmt=d=>(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
+  return {m,offset,inPeriod,cycleStart:fmt(cycleStart),nextStart:fmt(nextStart),daysToNext:Math.round((nextStart-d)/86400000),ovOffset,inOvulation,isOvulationDay};
+}
+function b6EvalState(){return todayStr()>='2026-08-11'}
+function vitcTaken(x){return (x&&x.vitcPcs!=null&&(x.vitcPcs>0||x.vitcPcs==='other'))||(x&&x.vitc===true)}
+function vitcRate(x){if(!x||x.vitcPcs==null)return 0;if(x.vitcPcs==='other')return 1;return Math.min(1,Number(x.vitcPcs)/4)}
+
+let cur={cycle:'ON',plan:'A',mens:'none'};
+let selectedDay=todayStr();
+let activePane='home';
+let saveTimer=null;
+let calMonth=selectedDay.slice(0,7);
+
+/* ---------- 周期默认值 ---------- */
+function defaultCycle(){
+  const db=load();const t=selectedDay;
+  if(db[t])return db[t];
+  let lastMode=null;
+  for(let i=1;i<=60;i++){const d=addDays(t,-i);const r=db[d];if(r&&r.cycle){lastMode=r.cycle;break}}
+  return {cycle:lastMode||'ON',plan:'A',mens:'none'};
+}
+/* ---------- 周期控件（卡片内嵌天数） ---------- */
+function setCycle(v){
+  cur.cycle=v;
+  if(v==='OFF' && !cur.plan)cur.plan='A';
+  syncCycleCards();
+  scheduleSave();updateTop();
+}
+function setPlan(v){cur.plan=v;document.querySelectorAll('#seg-plan button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));scheduleSave()}
+const PLAN_FX={A:'燕麦 + 皂角米 + 雪燕 + 脱脂奶（润燥补水）',B:'黄豆 + 白茯苓 + 芡实 + 陈皮（健脾利湿）',C:'黑米 + 黑豆 + 黑芝麻 + 陈皮（补肾益精·经期首选）'};
+const PLAN_NM={A:'A 润燥',B:'B 健脾',C:'C 补肾'};
+function togglePlanDetail(letter){
+  const box=document.getElementById('planDetail');
+  if(box.dataset.open===letter){box.classList.add('hidden');box.dataset.open='';return;}
+  box.dataset.open=letter;box.classList.remove('hidden');
+  const chk=cur.plan===letter?'checked':'';
+  box.innerHTML='<div class="pd-row"><div class="pd-fx">'+PLAN_FX[letter]+'</div>'+
+    '<label class="pd-chk"><input type="checkbox" '+chk+' onchange="pickPlan(\''+letter+'\',this.checked)"> 确认选 '+PLAN_NM[letter]+'</label></div>';
+}
+function pickPlan(letter,on){cur.plan=on?letter:'';document.querySelectorAll('#seg-plan button').forEach(b=>b.classList.toggle('on',on&&b.dataset.v===letter));if(!on)togglePlanDetail(letter);scheduleSave()}
+function togglePlanField(){const f=document.getElementById('planField');if(f)f.style.display=(cur.cycle==='OFF')?'':'none';}
+function setMens(v){
+  cur.mens=v;
+  document.getElementById('card-none').classList.toggle('on',v==='none');
+  document.getElementById('card-period').classList.toggle('on',v==='period');
+  closeAllSliders();
+  if(v==='period')document.getElementById('mensDayPop').classList.remove('hidden');
+  scheduleSave();
+}
+function setSkin(v){cur.skinTone=v;syncSkin();scheduleSave()}
+function syncSkin(){document.querySelectorAll('#seg-skin button').forEach(b=>b.classList.toggle('on',b.dataset.v===cur.skinTone))}
+
+/* ---------- 数字滑动条（卡片内嵌） ---------- */
+function closeAllSliders(){document.querySelectorAll('.cycle-pop').forEach(x=>x.classList.add('hidden'))}
+function sliderMove(id){
+  const v=Number(document.getElementById(id).value);
+  const b=document.getElementById(id+'Big');if(b)b.textContent=v;
+  if(id==='mensDay'){document.getElementById('mensDaySub').textContent='第 '+v+' 天';cur.mensDay=v;}
+  scheduleSave();updateTop();
+}
+function syncSliders(){   // 仅负责经期天数显示
+  const el=document.getElementById('mensDay');if(!el)return;
+  const v=el.value;const b=document.getElementById('mensDayBig');if(b)b.textContent=v;
+  const sub=document.getElementById('mensDaySub');if(sub)sub.textContent='第 '+v+' 天';
+}
+function syncCycleCards(){   // 仅选 ON / OFF 其一；天数由系统按历史自动推算
+  const onA=cur.cycle==='ON', offA=cur.cycle==='OFF';
+  const cON=document.getElementById('card-ON'),cOFF=document.getElementById('card-OFF');
+  const onSub=document.getElementById('onDaySub'),offSub=document.getElementById('offDaySub');
+  const nOn=onA?cycleDayNum(selectedDay):0, nOff=offA?cycleDayNum(selectedDay):0;
+  if(onSub)onSub.textContent= onA?('第 '+nOn+' 天'):'未选';
+  if(offSub)offSub.textContent= offA?('第 '+nOff+' 天'):'未选';
+  if(cON)cON.classList.toggle('on',onA);
+  if(cOFF)cOFF.classList.toggle('on',offA);
+  if(cON)cON.classList.remove('locked');
+  if(cOFF)cOFF.classList.remove('locked');
+  togglePlanField();
+}
+function cycleDayNum(ds){   // 从 ds 往前数连续同模式的天数（含 ds 本身）
+  const db=load();
+  const r=db[ds];
+  const myMode=(ds===selectedDay)?cur.cycle:(r?r.cycle:null);
+  if(!myMode)return 0;
+  let n=0,d=ds;
+  while(true){
+    const m=(d===ds)?myMode:(db[d]?db[d].cycle:null);
+    if(m===myMode)n++; else break;
+    d=addDays(d,-1);
+  }
+  return n;
+}
+function weightMove(){const r=document.getElementById('weightRuler');const n=document.getElementById('weight');if(r&&n)n.value=r.value;updateWeightUI();scheduleSave()}
+function weightNumSet(){const n=document.getElementById('weight');const r=document.getElementById('weightRuler');if(n.value===''){updateWeightUI();scheduleSave();return;}let v=Number(n.value);if(isNaN(v))return;if(r&&v>=80&&v<=100)r.value=v;updateWeightUI();scheduleSave()}
+function weightNumBlur(){const n=document.getElementById('weight');const r=document.getElementById('weightRuler');if(n.value===''){updateWeightUI();return;}let v=Number(n.value);if(isNaN(v))return;v=Math.max(80,Math.min(100,v));n.value=v.toFixed(1);if(r)r.value=v;updateWeightUI();scheduleSave()}
+function updateWeightUI(){const n=document.getElementById('weight');const r=document.getElementById('weightRuler');const big=document.getElementById('weightBig');const v=n?n.value:'';if(big)big.textContent=(v!==''?Number(v).toFixed(1):'未记')+' 斤';if(r&&v!=='')r.value=Math.max(80,Math.min(100,Number(v)));}
+function togglePrepDetail(id){const el=document.getElementById('prep-'+id);if(el)el.classList.toggle('hidden')}
+
+/* ---------- 载入某一天 ---------- */
+function loadDay(day){
+  if(dirty && selectedDay && selectedDay!==day){const db=load();db[selectedDay]=readForm();saveDB(db);dirty=false;}
+  selectedDay=day;
+  const def=defaultCycle();
+  cur={cycle:def.cycle||'ON',plan:def.plan||'A',mens:def.mens||'none',skinTone:def.skinTone||''};
+  if(def.mensDay)document.getElementById('mensDay').value=def.mensDay;
+  const db=load();const r=db[day];
+  if(!r){
+    const pi=periodInfo(day);
+    if(pi.inPeriod){cur.mens='period';cur.mensDay=pi.offset+1;document.getElementById('mensDay').value=cur.mensDay;}
+  }
+  const g=id=>document.getElementById(id);
+  if(r){
+    if(r.purple!=null && r.yam==null){r.yam=r.cabbage=!!r.purple}   /* 旧数据迁移 */
+    if(r.b2b6!=null && r.b2==null){r.b2=r.b6=!!r.b2b6}
+    cur=r;     if(r.mensDay)g('mensDay').value=r.mensDay;
+    g('weight').value=r.weight||''; g('protein').value=r.protein||''; g('lunchVeg').value=r.lunchVeg||''; g('dinnerVeg').value=r.dinnerVeg||'';
+    g('vitcPcs').value=r.vitcPcs!=null?String(r.vitcPcs):''; g('vitcNote').value=r.vitcNote||'';
+    if(g('vitcPcs').value==='null')g('vitcPcs').value='';
+    g('yam').checked=!!r.yam; g('cabbage').checked=!!r.cabbage; cur.skinTone=r.skinTone||'';
+    g('b2').checked=!!r.b2; g('b6').checked=!!r.b6; g('zinc').checked=!!r.zinc; g('pigskin').checked=!!r.pigskin; g('oil').value=r.oil||''; g('pores').value=r.pores||'';
+    g('studyContent').value=r.studyContent||''; g('studyForm').value=r.studyForm||''; g('studyMin').value=r.studyMin||''; g('studyGain').value=r.studyGain||'';
+    g('decoct').checked=!!r.decoct; g('soak').checked=!!r.soak; g('offprep').checked=!!r.offprep;
+    g('stool').value=r.stool||'';
+  }else{
+    ['weight','protein','lunchVeg','dinnerVeg','oil','pores','studyContent','studyForm','studyMin','studyGain','stool','vitcPcs','vitcNote'].forEach(k=>g(k).value='');
+    ['yam','cabbage','b2','b6','zinc','pigskin','decoct','soak','offprep'].forEach(k=>g(k).checked=false);
+    cur.skinTone='';
+  }
+  // 同步UI状态（关闭弹窗、同步卡片高亮与天数显示）
+  closeAllSliders();
+  syncCycleCards();
+  document.getElementById('card-none').classList.toggle('on',cur.mens==='none');
+  document.getElementById('card-period').classList.toggle('on',cur.mens==='period');
+  setPlan(cur.plan);syncSkin();syncSliders();updateWeightUI();
+  g('dayPick').value=day;
+  calMonth=day.slice(0,7);
+  clearTimeout(saveTimer);
+  updateSidebarDay();updateTop();renderCalendar();renderHome();renderWeight();renderWhite();renderAnti();renderStudy();renderNotes();renderVitaminRate();
+}
+function onDayPick(v){if(v)loadDay(v)}
+function updateSidebarDay(){const d=new Date(selectedDay+'T00:00:00');document.getElementById('sideDay').textContent=d.getDate();document.getElementById('sideWeek').textContent=weekday(selectedDay)+' · '+(selectedDay===todayStr()?'今天':(selectedDay.slice(5)));}
+
+/* ---------- 读取表单 ---------- */
+function readForm(){
+  const g=id=>document.getElementById(id);
+  return {
+    date:selectedDay,
+    cycle:cur.cycle||null,
+    onDay:(cur.cycle==='ON')?cycleDayNum(selectedDay):0,
+    plan:(cur.cycle==='OFF')?cur.plan:null,
+    offDay:(cur.cycle==='OFF')?cycleDayNum(selectedDay):0,
+    mens:cur.mens,mensDay:cur.mens==='period'?Number(g('mensDay').value||1):null,
+    weight:g('weight').value?Number(g('weight').value):null,
+    protein:g('protein').value||'', lunchVeg:g('lunchVeg').value||'', dinnerVeg:g('dinnerVeg').value||'',
+    vitcPcs:g('vitcPcs').value===''?null:(g('vitcPcs').value==='other'?'other':Number(g('vitcPcs').value)), vitcNote:g('vitcNote').value||'',
+    yam:g('yam').checked,cabbage:g('cabbage').checked,skinTone:cur.skinTone||'',
+    b2:g('b2').checked,b6:g('b6').checked,zinc:g('zinc').checked,pigskin:g('pigskin').checked,oil:g('oil').value||'',pores:g('pores').value||'',
+    studyContent:g('studyContent').value||'',studyForm:g('studyForm').value||'',studyMin:g('studyMin').value?Number(g('studyMin').value):null,studyGain:g('studyGain').value||'',
+    decoct:g('decoct').checked,soak:g('soak').checked,offprep:g('offprep').checked,
+    stool:g('stool').value||''
+  };
+}
+let dirty=false;
+function scheduleSave(){
+  dirty=true;
+  const ind=document.getElementById('saveInd');
+  if(ind){clearTimeout(ind._t);ind.textContent='● 未保存，请点「确认保存」';ind.classList.add('show');}
+}
+function confirmSave(){
+  if(!selectedDay)return;dirty=false;doSave();toast('✅ 已保存到本地');
+}
+function doSave(){
+  const r=readForm();const db=load();db[selectedDay]=r;saveDB(db);
+  const ind=document.getElementById('saveInd');ind.textContent='已保存 '+hhmm();ind.classList.add('show');
+  clearTimeout(ind._t);ind._t=setTimeout(()=>ind.classList.remove('show'),1500);
+  updateTop();
+  if(activePane==='home'){renderHome();renderVitaminRate();} if(activePane==='weight')renderWeight();
+  if(activePane==='white')renderWhite(); if(activePane==='anti')renderAnti(); if(activePane==='study')renderStudy();
+}
+
+/* ---------- 顶部状态 ---------- */
+function updateTop(){
+  const cc=document.getElementById('chipCycle');
+  if(cur.cycle==='ON'){cc.style.display='';cc.className='chip on';cc.textContent='ON D'+cycleDayNum(selectedDay)}
+  else if(cur.cycle==='OFF'){cc.style.display='';cc.className='chip off';cc.textContent='OFF·'+(cur.plan||'A')+' D'+cycleDayNum(selectedDay)}
+  else{cc.style.display='none'}
+  const cm=document.getElementById('chipMens');
+  if(cur.mens==='period'){cm.style.display='';cm.className='chip mens';cm.textContent='经期D'+(document.getElementById('mensDay').value||1)}
+  else cm.style.display='none';
+  const pi=periodInfo(selectedDay);
+  let lead='今天是 <b>'+selectedDay+'</b>，'+weekday(selectedDay)+'。';
+  if(selectedDay===todayStr()){
+    lead+='预测下次经期 <b>'+pi.nextStart+'</b>（还有'+(pi.daysToNext>0?pi.daysToNext:'已到')+'天）';
+    if(pi.inPeriod)lead+='，当前处于预测经期窗口内。';
+    else if(pi.daysToNext>0&&pi.daysToNext<=3)lead+='，临近经期（预测）。';
+  } else {
+    lead+='正在补记/修改这一天。';
+    if(pi.inPeriod)lead+='（该日处于预测经期窗口）';
+  }
+  document.getElementById('homeLead').innerHTML=lead;
+}
+
+/* ---------- 切换面板 ---------- */
+function switchPane(p,btn){
+  document.querySelectorAll('section.pane').forEach(s=>s.classList.remove('active'));
+  document.getElementById('pane-'+p).classList.add('active');
+  document.querySelectorAll('.nav button[data-pane]').forEach(b=>b.classList.remove('on'));btn.classList.add('on');
+  activePane=p;closeNav();
+  const titles={home:'今日计划',weight:'体重管理',white:'美白内调',anti:'抗衰控油',study:'学习成长',manual:'药膳手册',data:'设置'};
+  document.getElementById('topTitle').textContent=titles[p]||'';
+  if(p==='home'){renderHome();renderVitaminRate();}if(p==='weight')renderWeight();if(p==='white')renderWhite();if(p==='anti')renderAnti();if(p==='study')renderStudy();
+}
+function toggleNav(){document.getElementById('app').classList.toggle('nav-open')}
+function closeNav(){document.getElementById('app').classList.remove('nav-open')}
+function openLine(p){const btn=document.querySelector('.nav button[data-pane="'+p+'"]');if(btn)switchPane(p,btn)}
+
+/* ---------- 日历卡片（仪表盘顶部） ---------- */
+function calShift(n){const a=calMonth.split('-');let y=+a[0],m=+a[1]-1+n;y+=Math.floor(m/12);m=((m%12)+12)%12;calMonth=y+'-'+String(m+1).padStart(2,'0');renderCalendar();}
+function renderCalendar(){
+  const db=load();const a=calMonth.split('-');const y=+a[0],m=+a[1];
+  const startDow=new Date(y,m-1,1).getDay();const dim=new Date(y,m,0).getDate();
+  document.getElementById('calMonthLabel').textContent=y+'年'+m+'月';
+  const wd=['日','一','二','三','四','五','六'];
+  let h=wd.map(w=>'<div class="wd">'+w+'</div>').join('');
+  for(let i=0;i<startDow;i++)h+='<div class="cal-cell dim"></div>';
+  for(let d=1;d<=dim;d++){
+    const ds=y+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const pi=periodInfo(ds);const cls=['cal-cell'];
+    if(ds===todayStr())cls.push('today');
+    if(ds===selectedDay)cls.push('sel');
+    const isFuture=ds>todayStr();
+    if(pi.inPeriod)cls.push(isFuture?'pred':'period');
+    if(pi.inOvulation){cls.push('ovu');if(pi.isOvulationDay)cls.push('ovuday');}
+    let badge='';
+    const r=db[ds];
+    if(r&&r.cycle){
+      const md=cycleDayNum(ds);
+      if(r.cycle==='ON'){cls.push('cal-on');badge='<span class="cal-badge on">ON'+md+'</span>';}
+      else{cls.push('cal-off');badge='<span class="cal-badge off">OFF'+md+'</span>';}
+    }
+    h+='<div class="'+cls.join(' ')+'" onclick="loadDay(\''+ds+'\')"><span class="cal-num">'+d+'</span>'+badge+'</div>';
+  }
+  document.getElementById('calGrid').innerHTML=h;
+}
+
+/* ---------- 图表 ---------- */
+function recent(n){const db=load();const t=todayStr();const out=[];for(let i=0;i<n;i++){const d=addDays(t,-i);if(db[d])out.push(db[d])}return out.reverse()}
+function svgLine(series,opts){
+  opts=opts||{};const W=400,H=170,pL=34,pR=14,pT=14,pB=24;
+  const vals=series.map(d=>d.v).filter(v=>v!=null);
+  if(vals.length===0)return '<div class="empty">暂无数据</div>';
+  let min=opts.min!=null?opts.min:Math.min(...vals),max=opts.max!=null?opts.max:Math.max(...vals);
+  if(min===max){min-=1;max+=1}
+  const n=series.length,pw=W-pL-pR,ph=H-pT-pB;
+  const X=i=>pL+(n===1?pw/2:pw*i/(n-1)),Y=v=>pT+ph*(1-(v-min)/(max-min));
+  let path='',dots='';series.forEach((d,i)=>{if(d.v==null)return;const x=X(i),y=Y(d.v);path+=(path===''?'M':'L')+x.toFixed(1)+' '+y.toFixed(1)+' ';dots+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="3" fill="'+(opts.color||'#8C7DD9')+'"/>'});
+  let grid='';[0,.5,1].forEach(f=>{const y=pT+ph*f;const v=(max-(max-min)*f).toFixed(1);grid+='<line x1="'+pL+'" y1="'+y+'" x2="'+(W-pR)+'" y2="'+y+'" stroke="#e6e3f2" stroke-width="1"/><text x="2" y="'+(y+3)+'" font-size="10" fill="#9a9aa0">'+v+'</text>'});
+  const x1=series[0].date.slice(5),x2=series[n-1].date.slice(5);
+  const xl='<text x="'+pL+'" y="'+(H-6)+'" font-size="10" fill="#9a9aa0">'+x1+'</text><text x="'+(W-pR-32)+'" y="'+(H-6)+'" font-size="10" fill="#9a9aa0">'+x2+'</text>';
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block">'+grid+'<path d="'+path+'" fill="none" stroke="'+(opts.color||'#8C7DD9')+'" stroke-width="2.2" stroke-linejoin="round"/>'+dots+xl+'</svg>';
+}
+function svgBars(series,cmap,opts){
+  opts=opts||{};const W=400,H=120,pL=24,pR=8,pT=10,pB=18;const n=series.length;if(n===0)return '<div class="empty">暂无数据</div>';
+  const bw=(W-pL-pR)/n*0.7, gap=(W-pL-pR)/n;let s='';
+  series.forEach((d,i)=>{const x=pL+gap*i+(gap-bw)/2;const col=cmap[d.status]||'#c9c0bc';const h=H-pT-pB-2;s+='<rect x="'+x.toFixed(1)+'" y="'+(pT+2)+'" width="'+bw.toFixed(1)+'" height="'+h+'" rx="2" fill="'+col+'" opacity="0.85"/>'});
+  const leg=Object.keys(cmap).map(k=>'<span><i style="background:'+cmap[k]+'"></i>'+(opts.labels?opts.labels[k]:k)+'</span>').join('');
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="display:block">'+s+'</svg><div class="legend">'+leg+'</div>';
+}
+
+/* ---------- 各面板渲染 ---------- */
+function renderHome(){
+  const db=load();const r=db[selectedDay]||readForm();
+  const rec=recent(14);
+  document.getElementById('overview').innerHTML=[
+    {c:'var(--dotW)',ic:'⚖️',t:'体重管理',v:(r.weight?r.weight+'斤':'—'),s:(r.weight?(r.weight>90.5?'偏高':(r.weight<88?'偏轻':'达标')):'待记'),p:'weight'},
+    {c:'var(--dotWh)',ic:'🌸',t:'美白内调',v:(vitcTaken(r)?(r.vitcPcs==='other'?'其他':(r.vitcPcs?r.vitcPcs+'片':'✓')):'✗')+' 维C',s:'肤色：'+(r.skinTone||'待记'),p:'white'},
+    {c:'var(--dotA)',ic:'✨',t:'抗衰控油',v:((r.b2&&r.b6)?'✓':((r.b2||r.b6)?'部分':'✗'))+' B2/B6',s:'出油：'+(r.oil?{normal:'正常',more:'偏多',less:'偏少'}[r.oil]:'待记'),p:'anti'},
+    {c:'var(--dotS)',ic:'📚',t:'学习成长',v:(r.studyMin?r.studyMin+'分':'未记'),s:'连续坚持 '+studyStreak()+' 天',p:'study'}
+  ].map((o,i)=>'<div class="ov" style="--c:'+o.c+'" onclick="openLine(\''+o.p+'\')">'+
+    '<div class="ttl">'+o.ic+' '+o.t+'</div><div class="big">'+o.v+'</div><div class="sub">'+o.s+'</div></div>').join('');
+  document.getElementById('chHomeWeight').innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:4px">体重趋势</div>'+svgLine(rec.map(x=>({date:x.date,v:x.weight})),{color:'#7BA37A',min:88,max:92});
+  document.getElementById('chHomeStudy').innerHTML='<div style="font-size:12px;color:var(--muted);margin:10px 0 4px">学习时长</div>'+svgLine(rec.map(x=>({date:x.date,v:x.studyMin})),{color:'#A78BE0',min:0,max:60});
+}
+function renderVitaminRate(){
+  const box=document.getElementById('vitaminRate');if(!box)return;
+  const db=load();const r=db[selectedDay]||readForm();
+  const cR=vitcRate(r), b2R=r.b2?1:0, b6R=r.b6?1:0;
+  const rows=[
+    {n:'维生素C',sub:(r.vitcPcs==='other'?'自定义剂量':((r.vitcPcs||0)+' / 4 片')),v:Math.round(cR*100),col:'var(--dotWh)'},
+    {n:'维生素B2',sub:(r.b2?'已服':'未服')+'（标准 1 次/天）',v:Math.round(b2R*100),col:'var(--dotA)'},
+    {n:'维生素B6',sub:(r.b6?'已服':'未服')+'（标准 1 次/天）',v:Math.round(b6R*100),col:'var(--dotA)'}
+  ];
+  let h=rows.map(o=>'<div style="margin:7px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>'+o.n+' <span style="color:var(--muted);font-size:11px">'+o.sub+'</span></span><span style="font-weight:800;color:'+o.col+'">'+o.v+'%</span></div><div class="bar"><span style="width:'+o.v+'%;background:'+o.col+'"></span></div></div>').join('');
+  h+='<div class="stat-row" style="margin-top:8px;border-top:1px dashed var(--line);padding-top:8px"><span>综合执行率</span><span class="v" style="font-weight:800;font-size:15px;color:var(--accent)">'+Math.round((cR+b2R+b6R)/3*100)+'%</span></div>';
+  box.innerHTML=h;
+}
+function renderWeight(){
+  const db=load();const r=db[selectedDay]||{};
+  const rec=recent(14);
+  document.getElementById('chWeight').innerHTML=svgLine(rec.map(x=>({date:x.date,v:x.weight})),{color:'#7BA37A',min:88,max:92});
+  const ym=selectedDay.slice(0,7);let onN=0,offN=0,decoctN=0,soakN=0;
+  Object.keys(db).forEach(k=>{if(k.slice(0,7)===ym){const x=db[k];if(x.cycle==='ON')onN++;else offN++;if(x.decoct)decoctN++;if(x.soak)soakN++}});
+  const N=onN+offN;
+  document.getElementById('weightStats').innerHTML=
+    '<div class="stat-row"><span>本月 ON 主周期</span><span class="v">'+onN+' 天</span></div>'+
+    '<div class="stat-row"><span>本月 OFF 停饮日</span><span class="v">'+offN+' 天</span></div>'+
+    '<div class="stat-row"><span>三白饮煎药（本月）</span><span class="v">'+decoctN+' 次</span></div>'+
+    '<div class="stat-row"><span>七白饮泡料（本月）</span><span class="v">'+soakN+' 次</span></div>'+
+    (N>0?'<div class="stat-row"><span>ON 占比</span><span class="v">'+Math.round(onN/N*100)+'%</span></div>':'');
+}
+function renderWhite(){
+  const db=load();const r=db[selectedDay]||{};
+  const rec=recent(14);const N=rec.length||1;
+  const vitcR=Math.round(rec.filter(x=>vitcTaken(x)).length/N*100);
+  const yamDays=rec.filter(x=>x.yam).length,cabDays=rec.filter(x=>x.cabbage).length;
+  const yamR=Math.round(yamDays/N*100),cabR=Math.round(cabDays/N*100);
+  const todayVitc=Math.round(vitcRate(r)*100);
+  document.getElementById('whiteStats').innerHTML=
+    '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px;align-items:center"><span><b style="font-size:15px">今日</b>维C执行率</span><span class="v" style="font-weight:800;color:var(--dotWh)">'+todayVitc+'%</span></div><div class="bar"><span style="width:'+todayVitc+'%;background:var(--dotWh)"></span></div></div>'+
+    '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>维C 近14天服用率</span><span class="v" style="font-weight:800;color:var(--dotWh)">'+vitcR+'%</span></div><div class="bar"><span style="width:'+vitcR+'%;background:var(--dotWh)"></span></div></div>'+
+    '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>紫薯 摄入率（近14天）</span><span class="v" style="font-weight:800;color:var(--dotWh)">'+yamR+'%</span></div><div class="bar"><span style="width:'+yamR+'%;background:var(--dotWh)"></span></div></div>'+
+    '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>紫甘蓝 摄入率（近14天）</span><span class="v" style="font-weight:800;color:var(--dotWh)">'+cabR+'%</span></div><div class="bar"><span style="width:'+cabR+'%;background:var(--dotWh)"></span></div></div>'+
+    '<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5">计算方式：紫薯摄入率 = '+yamDays+'天 / '+N+'天 × 100% = '+yamR+'%<br>紫甘蓝摄入率 = '+cabDays+'天 / '+N+'天 × 100% = '+cabR+'%</div>'+
+    '<div style="font-size:12px;color:var(--muted);margin-top:10px">近期肤色：</div>'+
+    (rec.slice(-7).filter(x=>x.skinTone).map(x=>'<div class="stat-row"><span>'+x.date.slice(5)+'</span><span>'+x.skinTone+'</span></div>').join('')||'<div class="empty">暂无肤色记录</div>');
+  syncSkin();
+  let med='<div class="stat-row"><span>今日周期</span><span class="v">'+(cur.cycle==='ON'?('ON D'+cycleDayNum(selectedDay)):('OFF · '+(cur.plan||'A')))+'</span></div>';
+  if(cur.cycle==='ON')med+='<div class="stat-row"><span>三白饮 + 七白饮</span><span class="v">✓ 饮用</span></div><p class="hint">七白饮睡前泡料，三白饮每3天煎一次。</p>';
+  else med+='<div class="stat-row"><span>停饮方案 '+cur.plan+'</span><span class="v">'+({A:'润燥补水',B:'健脾利湿',C:'补肾益精(经期首选)'}[cur.plan]||'')+'</span></div><p class="hint">停饮日固定 + 猪皮冻（每周1次）。</p>';
+  document.getElementById('whiteMed').innerHTML=med;
+}
+function renderAnti(){
+  const db=load();const r=db[selectedDay]||{};
+  const b6b=document.getElementById('b6Badge');if(b6b){b6b.textContent=b6EvalState()?'已到评估日':'8.11 待评估';b6b.className='badge'+(b6EvalState()?' done':'');}
+  const rb=document.getElementById('b6Reminder');
+  if(rb){if(b6EvalState()){rb.style.display='block';rb.innerHTML='<b>📅 B6 评估日已到（8.11）</b>：当前 B6 为 20mg/天，是否降至 10mg（1片）维持？可告知我更新配方与手册。';}else rb.style.display='none';}
+  const rec=recent(14);const oilMap={normal:'#7BA37A',more:'#E0A458',less:'#5ABFB5'};
+  document.getElementById('chOil').innerHTML='<div style="font-size:12px;color:var(--muted);margin-bottom:4px">面部出油分布</div>'+svgBars(rec.map(x=>({date:x.date,status:x.oil})),oilMap,{labels:{normal:'正常',more:'偏多',less:'偏少'}});
+  const N=rec.length||1;
+  const b2R=Math.round(rec.filter(x=>x.b2).length/N*100),b6R=Math.round(rec.filter(x=>x.b6).length/N*100),zn=Math.round(rec.filter(x=>x.zinc).length/N*100),pig=rec.filter(x=>x.pigskin).length,more=rec.filter(x=>x.oil==='more').length;
+  const todayB2B6=Math.round(((r.b2?1:0)+(r.b6?1:0))/2*100);
+  document.getElementById('antiStats').innerHTML=
+    '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px;align-items:center"><span><b style="font-size:15px">今日</b>B2/B6执行率</span><span class="v" style="font-weight:800;color:var(--dotA)">'+todayB2B6+'%</span></div><div class="bar"><span style="width:'+todayB2B6+'%;background:var(--dotA)"></span></div></div>'+
+    '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>维生素B2 执行率（近14天）</span><span class="v" style="font-weight:800;color:var(--dotA)">'+b2R+'%</span></div><div class="bar"><span style="width:'+b2R+'%;background:var(--dotA)"></span></div></div>'+
+    '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>维生素B6 执行率（近14天）</span><span class="v" style="font-weight:800;color:var(--dotA)">'+b6R+'%</span></div><div class="bar"><span style="width:'+b6R+'%;background:var(--dotA)"></span></div></div>'+
+    '<div style="margin:6px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>锌 执行率（近14天）</span><span class="v" style="font-weight:800;color:var(--dotA)">'+zn+'%</span></div><div class="bar"><span style="width:'+zn+'%;background:var(--dotA)"></span></div></div>'+
+    '<div class="stat-row"><span>猪皮冻（近14天累计）</span><span class="v">'+pig+' 次</span></div>'+
+    (more>=2?'<div class="insight"><b>出油偏多 '+more+' 天</b>，8/11 评估 B6 是否从 20mg 降至 10mg。</div>':'');
+}
+function renderStudy(){
+  const db=load();const r=db[selectedDay]||{};
+  const ss=document.getElementById('studyStreakShow');if(ss)ss.textContent=studyStreak()+' 天';
+  const rec=recent(14);
+  document.getElementById('chStudy').innerHTML=svgLine(rec.map(x=>({date:x.date,v:x.studyMin})),{color:'#A78BE0',min:0,max:60});
+  const days=rec.filter(x=>x.studyMin>0);const avg=days.length?Math.round(days.reduce((a,x)=>a+(x.studyMin||0),0)/days.length):0;
+  document.getElementById('studyStats').innerHTML=
+    '<div class="stat-row"><span>连续学习天数</span><span class="v">'+studyStreak()+' 天</span></div>'+
+    '<div class="stat-row"><span>平均时长（有记录日）</span><span class="v">'+avg+' 分钟</span></div>'+
+    '<div class="stat-row"><span>近14天学习打卡</span><span class="v">'+days.length+' 天</span></div>'+
+    '<p class="hint">目标：冷启动期逐步到 30 分钟/天，方向以个人成长为主、健康养生为辅。</p>';
+}
+function studyStreak(){
+  const db=load();let s=0;
+  for(let i=0;i<200;i++){const d=addDays(todayStr(),-i);const x=db[d];if(x&&x.studyMin>0)s++;else if(i>0)break}
+  return s;
+}
+
+/* ---------- 经期设置 ---------- */
+function saveMensSettings(){
+  const seed=document.getElementById('mensSeed').value;
+  const dur=Number(document.getElementById('mensDur').value||7);
+  const interval=Number(document.getElementById('mensInt').value||29);
+  if(!seed)return;
+  localStorage.setItem('elina_mens',JSON.stringify({seed,dur,interval}));
+  const pi=periodInfo(selectedDay);
+  document.getElementById('mensPredict').innerHTML='下次经期预测：<b>'+pi.nextStart+'</b>（还有'+(pi.daysToNext>0?pi.daysToNext:'已到')+'天）';
+  updateTop();
+  toast('经期设置已保存');
+}
+function loadMensInputs(){
+  const m=mensSettings();
+  document.getElementById('mensSeed').value=m.seed;
+  document.getElementById('mensDur').value=m.dur;
+  document.getElementById('mensInt').value=m.interval;
+  const pi=periodInfo(selectedDay);
+  document.getElementById('mensPredict').innerHTML='下次经期预测：<b>'+pi.nextStart+'</b>（还有'+(pi.daysToNext>0?pi.daysToNext:'已到')+'天）';
+}
+
+/* ---------- 导入导出摘要 ---------- */
+function exportJSON(){const db=load();const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='抗衰美白记录-'+todayStr()+'.json';a.click();toast('已导出')}
+function importJSON(input){const f=input.files[0];if(!f)return;const rd=new FileReader();rd.onload=function(e){try{const o=JSON.parse(e.target.result);const db=load();let c=0;Object.keys(o).forEach(k=>{db[k]=o[k];c++});saveDB(db);toast('已导入 '+c+' 天');loadDay(selectedDay);}catch(err){toast('文件格式不对')}input.value=''};rd.readAsText(f)}
+function clearAll(){if(confirm('确定清空全部本地记录？此操作不可恢复！建议先导出备份。')){localStorage.removeItem(KEY);toast('已清空');loadDay(todayStr())}}
+function buildSummary(){
+  const db=load();const keys=Object.keys(db).sort();if(keys.length===0)return '（暂无记录）';
+  const rec=keys.map(k=>db[k]);const last=rec[rec.length-1],first=rec[0];
+  const wF=rec.find(x=>x.weight!=null),wL=[...rec].reverse().find(x=>x.weight!=null);
+  const N=rec.length;const rate=f=>Math.round(rec.filter(f).length/N*100);
+  const loose=rec.filter(x=>x.stool==='loose').length,dry=rec.filter(x=>x.stool==='dry').length,more=rec.filter(x=>x.oil==='more').length;
+  const pig=rec.filter(x=>x.pigskin).length;const sd=rec.filter(x=>x.studyMin>0);const studAvg=sd.length?Math.round(sd.reduce((a,x)=>a+(x.studyMin||0),0)/sd.length):0;
+  const notes=loadNotes();
+  let s='【抗衰美白记录摘要】\n记录区间：'+first.date+' ~ '+last.date+'，共 '+N+' 天\n';
+  s+='体重：'+(wF?wF.weight:'-')+'斤 → '+(wL?wL.weight:'-')+'斤\n';
+  s+='执行率：维C '+rate(x=>vitcTaken(x))+'%｜B2 '+rate(x=>x.b2)+'%｜B6 '+rate(x=>x.b6)+'%｜锌 '+rate(x=>x.zinc)+'%｜学习 '+rate(x=>x.studyMin>0)+'%\n';
+  const tv=db[selectedDay]||readForm();
+  s+='今日维生素综合执行率：'+Math.round((vitcRate(tv)+(tv.b2?1:0)+(tv.b6?1:0))/3*100)+'%（维C '+Math.round(vitcRate(tv)*100)+'% · B2 '+(tv.b2?100:0)+'% · B6 '+(tv.b6?100:0)+'%）\n';
+  s+='身体信号：大便偏稀 '+loose+'天｜偏干 '+dry+'天｜出油偏多 '+more+'天\n';
+  s+='猪皮冻累计 '+pig+'次；学习平均 '+studAvg+'分钟/天\n';
+  if(notes.length){s+='最近备注：\n';notes.slice(-5).reverse().forEach(n=>{const lm={'1':'①体重','2':'②美白','3':'③抗衰','4':'④学习提升'};s+='- '+n.date+' '+(n.line?lm[n.line]+' ':'')+n.text+'\n'})}
+  s+='最近几天明细：\n';
+  rec.slice(-7).forEach(x=>{s+='- '+x.date+' '+x.cycle+(x.cycle==='ON'?('D'+x.onDay):('·'+x.plan))+' 体重'+(x.weight||'-')+' 维C'+(vitcTaken(x)?'✓':'✗')+' B2'+(x.b2?'✓':'✗')+'B6'+(x.b6?'✓':'✗')+' 出油'+(x.oil||'-')+' 大便'+(x.stool||'-')+' 学习'+(x.studyMin||0)+'分\n'});
+  return s;
+}
+function copySummary(){const txt=buildSummary();
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>toast('已复制，发给我即可分析')).catch(()=>fallbackCopy(txt))}else fallbackCopy(txt)}
+function fallbackCopy(txt){const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('已复制')}catch(e){prompt('复制以下内容发给我：',txt)}document.body.removeChild(ta)}
+
+/* ---------- 备注系统 ---------- */
+const NOTES_KEY='elina_notes_v1';
+function loadNotes(){try{return JSON.parse(localStorage.getItem(NOTES_KEY))||[]}catch(e){return[]}}
+function saveNotes(arr){localStorage.setItem(NOTES_KEY,JSON.stringify(arr))}
+function migrateOldNotes(){
+  const db=load();const notes=loadNotes();let added=0;
+  Object.keys(db).forEach(date=>{
+    const txt=db[date].other;if(txt && !notes.some(n=>n.date===date && n.text===txt)){
+      notes.push({id:Date.now()+added,date,text:txt,tags:[],line:'',createdAt:Date.now()+added});added++;
+    }
+  });
+  if(added){saveNotes(notes);toast('已迁移 '+added+' 条旧备注')}
+}
+function addLineNote(line){
+  const t=document.getElementById('cnText'+line);
+  const txt=t.value.trim();if(!txt){toast('请输入备注内容');return}
+  const notes=loadNotes();
+  notes.push({id:Date.now(),date:selectedDay,text:txt,line:String(line),createdAt:Date.now()});
+  saveNotes(notes);t.value='';
+  renderNotes();toast('备注已保存');
+}
+function deleteNote(id){
+  const notes=loadNotes().filter(n=>n.id!==id);saveNotes(notes);renderNotes();
+}
+function renderNotes(){
+  const notes=loadNotes().sort((a,b)=>b.createdAt-a.createdAt);
+  for(let i=1;i<=4;i++){
+    const list=document.getElementById('cnList'+i);if(!list)continue;
+    const ns=notes.filter(n=>n.line===String(i)&&n.date===selectedDay);
+    if(!ns.length){list.innerHTML='<div class="cn-empty">暂无备注</div>';continue;}
+    list.innerHTML=ns.map(n=>'<div class="cn-item"><div class="txt">'+escapeHtml(n.text)+'</div><button class="cn-del" onclick="deleteNote('+n.id+')">删除</button></div>').join('');
+  }
+}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+/* ---------- 初始化 ---------- */
+loadMensInputs();
+migrateOldNotes();
+if(b6EvalState()&&!localStorage.getItem('elina_b6_seen')){localStorage.setItem('elina_b6_seen','1');toast('B6 评估日已到：考虑降至10mg')}
+loadDay(todayStr());
+window.addEventListener('pagehide',()=>{if(dirty&&selectedDay){const db=load();db[selectedDay]=readForm();saveDB(db);dirty=false;}});
+</script>
+</body>
+</html>
